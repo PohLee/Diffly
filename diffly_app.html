@@ -599,7 +599,7 @@ function processText(text, mode) {
 function cleanText(text) {
     return text
         .replace(/[\r\n\t]+/g, ' ')   // line breaks + tabs → space
-        .replace(/[^\w\s]/g, '')       // strip punctuation
+        .replace(/[^\w\s]/g, ' ')      // replace punctuation with space (not empty — avoids merging words)
         .replace(/\s{2,}/g, ' ')       // collapse multiple spaces
         .trim();
 }
