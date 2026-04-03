@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Compare</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            padding: 20px;
+            background: #fff;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .container { max-width: 1400px; margin: 0 auto; }
+
+        h1 { margin-bottom: 14px; font-size: 1.3rem; font-weight: 600; }
+
+        /* ── Controls ── */
+        .controls {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+            padding: 10px 14px;
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+        }
+        .control-group { display: flex; align-items: center; gap: 6px; }
+        .control-group label { font-weight: 500; font-size: 0.85rem; color: #374151; white-space: nowrap; }
+
+        select {
+            padding: 4px 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            background: #fff;
+            color: #333;
+        }
+        select:focus { outline: 2px solid #2563eb; outline-offset: 1px; }
+
+        .compare-btn {
+            padding: 5px 16px;
+            background: #2563eb;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        .compare-btn:hover { background: #1d4ed8; }
+        .compare-btn:active { background: #1e40af; }
+
+        /* ── Input section ── */
+        .input-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin-bottom: 12px;
+        }
+        .input-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        .input-panel-header h2 { font-size: 0.875rem; font-weight: 600; color: #374151; }
+
+        .clear-btn {
+            padding: 2px 8px;
+            background: transparent;
+            color: #6b7280;
+            border: 1px solid #d1d5db;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
+        .clear-btn:hover { background: #f3f4f6; color: #374151; }
+
+        /* ── Textarea + mirror overlay ── */
+        /*
+         * The mirror is an absolutely-positioned div behind the transparent textarea.
+         * It renders the same text with colored backgrounds for diff highlights.
+         * color:transparent on the mirror means only backgrounds show — textarea text sits on top.
+         */
+        .textarea-wrapper { position: relative; }
+
+        .mirror {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            padding: 10px;
+            border: 1px solid transparent;
+            border-radius: 4px;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            overflow-wrap: break-word;
+            overflow: scroll;
+            scrollbar-width: none;
+            pointer-events: none;
+            z-index: 0;
+            color: transparent;    /* hide mirror text; only backgrounds visible */
+            background: #fff;
+        }
+        .mirror::-webkit-scrollbar { display: none; }
+
+        .mirror .mirror-del { background: rgba(252, 165, 165, 0.55); border-radius: 2px; }
+        .mirror .mirror-add { background: rgba(134, 239, 172, 0.55); border-radius: 2px; }
+
+        textarea {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            height: 200px;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            resize: vertical;
+            background: transparent;   /* let mirror show through */
+            color: #111;
+            caret-color: #111;
+        }
+        textarea:focus { outline: none; border-color: #2563eb; }
+        textarea.drag-over { border-color: #2563eb; background: rgba(239, 246, 255, 0.7); }
+
+        /* ── File controls ── */
+        .file-controls {
+            margin-top: 5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.78rem;
+            color: #6b7280;
+        }
+        .file-name {
+            font-style: italic;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 180px;
+        }
+
+        /* ── Summary bar ── */
+        .summary-bar {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 12px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            font-size: 0.82rem;
+        }
+        .summary-bar.visible { display: flex; }
+        .summary-bar.identical { background: #f0fdf4; border: 1px solid #bbf7d0; }
+        .summary-bar.has-diff  { background: #fffbeb; border: 1px solid #fde68a; }
+
+        .badge-identical { font-weight: 600; color: #15803d; }
+        .summary-del     { color: #dc2626; font-weight: 500; }
+        .summary-add     { color: #16a34a; font-weight: 500; }
+        .summary-chars   { color: #6b7280; }
+        .summary-sep     { color: #d1d5db; }
+
+        /* ── Error ── */
+        .error-message {
+            color: #dc2626;
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            display: none;
+        }
+        .error-message.visible { display: block; }
+
+        /* ── Output wrapper ── */
+        .output-wrapper { border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; }
+
+        .output-header {
+            padding: 7px 12px;
+            background: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: #6b7280;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* collapsed panel: hide content + drop border-bottom from header */
+        .output-wrapper.collapsed .output-section { display: none; }
+        .output-wrapper.collapsed .output-header  { border-bottom: none; }
+
+        /* fullscreen overlay */
+        .output-wrapper.fullscreen {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            border-radius: 0;
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .output-wrapper.fullscreen .output-section {
+            flex: 1;
+            overflow-y: auto;
+            min-height: 0;
+        }
+
+        .output-header-left { display: flex; align-items: center; gap: 6px; }
+
+        .nav-controls { display: flex; align-items: center; gap: 6px; }
+        .nav-sep { width: 1px; height: 14px; background: #e5e7eb; margin: 0 2px; }
+
+        .nav-btn {
+            padding: 2px 10px;
+            background: #fff;
+            border: 1px solid #d1d5db;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.78rem;
+            color: #374151;
+            line-height: 1.6;
+        }
+        .nav-btn:hover:not(:disabled) { background: #f3f4f6; }
+        .nav-btn:disabled { opacity: 0.35; cursor: default; }
+
+        #diff-counter { font-size: 0.78rem; color: #6b7280; min-width: 42px; text-align: center; }
+
+        /* ── Output content ── */
+        .output-section {
+            padding: 12px;
+            min-height: 80px;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+            font-size: 0.83rem;
+        }
+
+        .empty-output {
+            color: #9ca3af;
+            font-style: italic;
+            text-align: center;
+            padding: 20px;
+            font-family: inherit;
+        }
+
+        /* ── Unchanged / collapsible blocks ── */
+        .collapse-block {
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            margin-bottom: 6px;
+            overflow: hidden;
+        }
+        .collapse-toggle {
+            width: 100%;
+            text-align: left;
+            padding: 5px 12px;
+            background: #f9fafb;
+            border: none;
+            cursor: pointer;
+            font-size: 0.78rem;
+            color: #9ca3af;
+            font-family: inherit;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            user-select: none;
+        }
+        .collapse-toggle:hover { background: #f3f4f6; color: #6b7280; }
+        .collapse-icon { font-size: 0.65rem; }
+
+        .collapse-content { border-top: 1px solid #e5e7eb; display: none; }
+
+        .unchanged-text {
+            padding: 6px 12px;
+            color: #9ca3af;
+            white-space: pre-wrap;
+            overflow-wrap: break-word;
+            font-family: inherit;
+        }
+
+        .unchanged-inline { margin-bottom: 6px; }
+
+        /* ── Changed chunk ── */
+        .diff-chunk {
+            border-left: 3px solid #f59e0b;
+            border-radius: 0 4px 4px 0;
+            margin-bottom: 6px;
+            overflow: hidden;
+        }
+
+        /* Side-by-side layout */
+        .sbs-chunk { display: grid; grid-template-columns: 1fr 1fr; }
+
+        .chunk-left {
+            border-right: 1px solid #e5e7eb;
+            padding: 6px 10px;
+            overflow-x: auto;
+            background: #fff;
+        }
+        .chunk-right {
+            padding: 6px 10px;
+            overflow-x: auto;
+            background: #fff;
+        }
+
+        /* Unified layout */
+        .uni-chunk { padding: 4px 10px; background: #fff; }
+
+        .chunk-content {
+            white-space: pre-wrap;
+            overflow-wrap: break-word;
+            font-family: inherit;
+        }
+
+        .addition { background: #dcfce7; color: #14532d; }
+        .deletion { background: #fee2e2; color: #7f1d1d; }
+        .empty-side { color: #d1d5db; font-style: italic; font-size: 0.78rem; }
+
+        /* ── Responsive ── */
+        @media (max-width: 768px) {
+            .input-section      { grid-template-columns: 1fr; }
+            .sbs-chunk          { grid-template-columns: 1fr; }
+            .chunk-left         { border-right: none; border-bottom: 1px solid #e5e7eb; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Text Compare</h1>
+
+    <div class="controls">
+        <div class="control-group">
+            <label for="mode-select">Mode:</label>
+            <select id="mode-select">
+                <option value="ascii">ASCII (strip non-ASCII)</option>
+                <option value="unicode">Unicode</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label for="granularity-select">Granularity:</label>
+            <select id="granularity-select">
+                <option value="line">Line</option>
+                <option value="word">Word</option>
+                <option value="char">Character</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label for="view-select">View:</label>
+            <select id="view-select">
+                <option value="sidebyside">Side-by-side</option>
+                <option value="unified">Unified</option>
+            </select>
+        </div>
+        <button class="compare-btn" id="compare-btn">Compare</button>
+    </div>
+
+    <div id="summary-bar" class="summary-bar"></div>
+
+    <div class="input-section">
+        <div class="input-panel">
+            <div class="input-panel-header">
+                <h2>Text A</h2>
+                <button class="clear-btn" onclick="clearPanel('text-a','file-a','file-a-name')">Clear</button>
+            </div>
+            <div class="textarea-wrapper">
+                <div class="mirror" id="mirror-a"></div>
+                <textarea id="text-a" placeholder="Paste text here, or drag &amp; drop a file…"></textarea>
+            </div>
+            <div class="file-controls">
+                <input type="file" id="file-a">
+                <span class="file-name" id="file-a-name"></span>
+            </div>
+        </div>
+
+        <div class="input-panel">
+            <div class="input-panel-header">
+                <h2>Text B</h2>
+                <button class="clear-btn" onclick="clearPanel('text-b','file-b','file-b-name')">Clear</button>
+            </div>
+            <div class="textarea-wrapper">
+                <div class="mirror" id="mirror-b"></div>
+                <textarea id="text-b" placeholder="Paste text here, or drag &amp; drop a file…"></textarea>
+            </div>
+            <div class="file-controls">
+                <input type="file" id="file-b">
+                <span class="file-name" id="file-b-name"></span>
+            </div>
+        </div>
+    </div>
+
+    <div id="error-message" class="error-message"></div>
+
+    <div class="output-wrapper">
+        <div class="output-header">
+            <div class="output-header-left">
+                <button class="nav-btn" id="panel-toggle-btn" title="Collapse/expand panel">▼</button>
+                <span>Diff Output</span>
+            </div>
+            <div class="nav-controls">
+                <button class="nav-btn" id="collapse-all-btn" title="Collapse all identical blocks (Alt+C)">Collapse All</button>
+                <button class="nav-btn" id="expand-all-btn" title="Expand all identical blocks (Alt+E)">Expand All</button>
+                <span class="nav-sep"></span>
+                <button class="nav-btn" id="prev-btn" disabled>▲ Prev</button>
+                <span id="diff-counter"></span>
+                <button class="nav-btn" id="next-btn" disabled>▼ Next</button>
+                <span class="nav-sep"></span>
+                <button class="nav-btn" id="fullscreen-btn" title="Toggle fullscreen (Esc to exit)">&#x2922;</button>
+            </div>
+        </div>
+        <div id="output" class="output-section">
+            <div class="empty-output">Enter text above to compare.</div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ─── State ────────────────────────────────────────────────────────────────────
+let diffChunks   = [];   // DOM elements with class diff-chunk
+let chunkIdx     = -1;
+let debounceTimer = null;
+
+// ─── Utilities ────────────────────────────────────────────────────────────────
+function escapeHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+}
+function showError(msg) {
+    const el = document.getElementById('error-message');
+    el.textContent = msg;
+    el.classList.add('visible');
+}
+function hideError() {
+    const el = document.getElementById('error-message');
+    el.textContent = '';
+    el.classList.remove('visible');
+}
+function clearPanel(taId, fileId, nameId) {
+    document.getElementById(taId).value   = '';
+    document.getElementById(fileId).value = '';
+    document.getElementById(nameId).textContent = '';
+    scheduleCompare();
+}
+
+// ─── File reading ─────────────────────────────────────────────────────────────
+function readFile(file) {
+    return new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload  = () => resolve(r.result);
+        r.onerror = () => reject(new Error('Failed to read: ' + file.name));
+        r.readAsText(file);
+    });
+}
+async function loadFile(file, taId, nameId) {
+    if (file.size > 1024 * 1024) {
+        if (!confirm('"' + file.name + '" is > 1 MB. Continue?')) return;
+    }
+    try {
+        document.getElementById(taId).value = await readFile(file);
+        document.getElementById(nameId).textContent = file.name;
+        hideError();
+        scheduleCompare();
+    } catch (e) { showError(e.message); }
+}
+
+function initFileInput(fileId, taId, nameId) {
+    document.getElementById(fileId).addEventListener('change', async e => {
+        const f = e.target.files[0];
+        if (f) await loadFile(f, taId, nameId);
+    });
+}
+function initDragDrop(taId, nameId) {
+    const ta = document.getElementById(taId);
+    ['dragenter','dragover','dragleave','drop'].forEach(ev =>
+        ta.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); })
+    );
+    ta.addEventListener('dragover',  () => ta.classList.add('drag-over'));
+    ta.addEventListener('dragleave', () => ta.classList.remove('drag-over'));
+    ta.addEventListener('drop', async e => {
+        ta.classList.remove('drag-over');
+        const f = e.dataTransfer.files[0];
+        if (f) await loadFile(f, taId, nameId);
+    });
+}
+
+initFileInput('file-a', 'text-a', 'file-a-name');
+initFileInput('file-b', 'text-b', 'file-b-name');
+initDragDrop('text-a', 'file-a-name');
+initDragDrop('text-b', 'file-b-name');
+
+// ─── Scroll sync: keep mirror in step with textarea ───────────────────────────
+function initScrollSync(taId, mirrorId) {
+    const ta     = document.getElementById(taId);
+    const mirror = document.getElementById(mirrorId);
+    ta.addEventListener('scroll', () => {
+        mirror.scrollTop  = ta.scrollTop;
+        mirror.scrollLeft = ta.scrollLeft;
+    });
+}
+initScrollSync('text-a', 'mirror-a');
+initScrollSync('text-b', 'mirror-b');
+
+// ─── Scroll sync between the two textareas (horizontal + vertical) ────────────
+(function() {
+    const taA = document.getElementById('text-a');
+    const taB = document.getElementById('text-b');
+    let syncing = false;
+    taA.addEventListener('scroll', () => {
+        if (syncing) return;
+        syncing = true;
+        taB.scrollLeft = taA.scrollLeft;
+        taB.scrollTop  = taA.scrollTop;
+        syncing = false;
+    });
+    taB.addEventListener('scroll', () => {
+        if (syncing) return;
+        syncing = true;
+        taA.scrollLeft = taB.scrollLeft;
+        taA.scrollTop  = taB.scrollTop;
+        syncing = false;
+    });
+})();
+
+// ─── Text processing ──────────────────────────────────────────────────────────
+function processText(text, mode) {
+    return mode === 'ascii' ? text.replace(/[^\x00-\x7F]/g, '') : text;
+}
+
+// ─── Diff engine (LCS) — fully local, zero network calls ─────────────────────
+function computeLCS(a, b) {
+    const m = a.length, n = b.length;
+    const dp = Array.from({ length: m + 1 }, () => new Int32Array(n + 1));
+    for (let i = 1; i <= m; i++)
+        for (let j = 1; j <= n; j++)
+            dp[i][j] = a[i-1] === b[j-1]
+                ? dp[i-1][j-1] + 1
+                : Math.max(dp[i-1][j], dp[i][j-1]);
+
+    const result = [];
+    let i = m, j = n;
+    while (i > 0 || j > 0) {
+        if (i > 0 && j > 0 && a[i-1] === b[j-1]) {
+            result.unshift({ type: 'unchanged', value: a[i-1] }); i--; j--;
+        } else if (j > 0 && (i === 0 || dp[i][j-1] >= dp[i-1][j])) {
+            result.unshift({ type: 'addition', value: b[j-1] }); j--;
+        } else {
+            result.unshift({ type: 'deletion', value: a[i-1] }); i--;
+        }
+    }
+    return result;
+}
+
+function computeDiff(a, b, granularity) {
+    switch (granularity) {
+        case 'line': return computeLCS(a.split('\n'),     b.split('\n'));
+        case 'word': return computeLCS(a.split(/(\s+)/), b.split(/(\s+)/));
+        case 'char': return computeLCS(Array.from(a),    Array.from(b));
+        default:     return computeLCS(a.split('\n'),     b.split('\n'));
+    }
+}
+
+// ─── Mirror overlay ───────────────────────────────────────────────────────────
+/*
+ * For each side we reconstruct that side's original text with highlight <span>s.
+ * Left  = unchanged + deletions (what Text A contains)
+ * Right = unchanged + additions (what Text B contains)
+ * The mirror div has color:transparent so only span backgrounds show through
+ * the transparent textarea that sits on top.
+ */
+function buildMirrorHtml(diff, side, granularity) {
+    const isLine = granularity === 'line';
+    const parts  = [];
+
+    for (const { type, value } of diff) {
+        if (side === 'left'  && type === 'addition') continue;
+        if (side === 'right' && type === 'deletion') continue;
+
+        const e = escapeHtml(value);
+        if      (type === 'deletion') parts.push('<span class="mirror-del">' + e + '</span>');
+        else if (type === 'addition') parts.push('<span class="mirror-add">' + e + '</span>');
+        else                          parts.push(e);
+
+        if (isLine) parts.push('\n');
+    }
+    // Trim trailing separator
+    if (isLine && parts.length && parts[parts.length - 1] === '\n') parts.pop();
+
+    return parts.join('');
+}
+
+function updateMirrors(diff, granularity) {
+    document.getElementById('mirror-a').innerHTML = buildMirrorHtml(diff, 'left',  granularity);
+    document.getElementById('mirror-b').innerHTML = buildMirrorHtml(diff, 'right', granularity);
+}
+function clearMirrors() {
+    document.getElementById('mirror-a').innerHTML = '';
+    document.getElementById('mirror-b').innerHTML = '';
+}
+
+// ─── Segment grouping ─────────────────────────────────────────────────────────
+function groupSegments(diff) {
+    const segs = [];
+    let i = 0;
+    while (i < diff.length) {
+        const unch = diff[i].type === 'unchanged';
+        let j = i + 1;
+        while (j < diff.length && (diff[j].type === 'unchanged') === unch) j++;
+        segs.push({ type: unch ? 'unchanged' : 'changed', items: diff.slice(i, j) });
+        i = j;
+    }
+    return segs;
+}
+
+// ─── Output rendering ─────────────────────────────────────────────────────────
+const COLLAPSE_MIN_LINES = 4;   // collapse identical runs >= this many lines
+
+function renderUnchangedSeg(items, granularity) {
+    const isLine  = granularity === 'line';
+    const count   = items.length;
+    const unit    = isLine ? 'line' : granularity === 'word' ? 'word' : 'char';
+    const label   = count + ' identical ' + unit + (count === 1 ? '' : 's');
+    const content = isLine
+        ? items.map(i => escapeHtml(i.value)).join('\n')
+        : items.map(i => escapeHtml(i.value)).join('');
+
+    if (isLine && count >= COLLAPSE_MIN_LINES) {
+        return '<div class="collapse-block">' +
+            '<button class="collapse-toggle" onclick="toggleCollapse(this)">' +
+            '<span class="collapse-icon">▶</span>' + label +
+            '</button>' +
+            '<div class="collapse-content">' +
+            '<div class="unchanged-text">' + content + '</div>' +
+            '</div></div>';
+    }
+    return '<div class="unchanged-inline"><div class="unchanged-text">' + content + '</div></div>';
+}
+
+function renderChangedSeg(items, viewMode, granularity, id) {
+    const isLine = granularity === 'line';
+
+    if (viewMode === 'sidebyside') {
+        const lParts = [], rParts = [];
+        for (const { type, value } of items) {
+            const e = escapeHtml(value);
+            if (type === 'deletion') {
+                lParts.push('<span class="deletion">' + e + '</span>');
+                if (isLine) lParts.push('\n');
+            } else {
+                rParts.push('<span class="addition">' + e + '</span>');
+                if (isLine) rParts.push('\n');
+            }
+        }
+        if (isLine) {
+            while (lParts.length && lParts[lParts.length-1] === '\n') lParts.pop();
+            while (rParts.length && rParts[rParts.length-1] === '\n') rParts.pop();
+        }
+        const lHtml = lParts.join('') || '<span class="empty-side">(none)</span>';
+        const rHtml = rParts.join('') || '<span class="empty-side">(none)</span>';
+
+        return '<div class="diff-chunk sbs-chunk" id="' + id + '">' +
+            '<div class="chunk-left"><div class="chunk-content">'  + lHtml + '</div></div>' +
+            '<div class="chunk-right"><div class="chunk-content">' + rHtml + '</div></div>' +
+            '</div>';
+    }
+
+    // Unified
+    let html = '';
+    for (const { type, value } of items) {
+        const e      = escapeHtml(value);
+        const prefix = type === 'deletion' ? '- ' : '+ ';
+        const cls    = type === 'deletion' ? 'deletion' : 'addition';
+        html += '<span class="' + cls + '">' + prefix + e + '</span>';
+        if (isLine) html += '\n';
+    }
+    return '<div class="diff-chunk uni-chunk" id="' + id + '">' +
+        '<div class="chunk-content">' + html + '</div></div>';
+}
+
+function renderOutput(diff, viewMode, granularity) {
+    const out = document.getElementById('output');
+
+    if (!diff.length) {
+        out.innerHTML = '<div class="empty-output">Enter text above to compare.</div>';
+        return;
+    }
+    if (diff.every(d => d.type === 'unchanged')) {
+        out.innerHTML = '<div class="empty-output" style="color:#15803d;font-style:normal">' +
+            '&#10003; Texts are identical.</div>';
+        return;
+    }
+
+    let html = '', idx = 0;
+    for (const seg of groupSegments(diff)) {
+        if (seg.type === 'unchanged') {
+            html += renderUnchangedSeg(seg.items, granularity);
+        } else {
+            html += renderChangedSeg(seg.items, viewMode, granularity, 'dc-' + idx++);
+        }
+    }
+    out.innerHTML = html;
+}
+
+// ─── Collapse toggle ──────────────────────────────────────────────────────────
+function toggleCollapse(btn) {
+    const content = btn.nextElementSibling;
+    const icon    = btn.querySelector('.collapse-icon');
+    const open    = content.style.display === 'block';
+    content.style.display = open ? 'none'  : 'block';
+    icon.textContent      = open ? '▶'     : '▼';
+}
+
+// ─── Diff navigation ──────────────────────────────────────────────────────────
+function collectChunks() {
+    diffChunks = Array.from(document.querySelectorAll('.diff-chunk'));
+    chunkIdx   = diffChunks.length > 0 ? 0 : -1;
+    updateNav();
+}
+
+function jumpTo(idx) {
+    if (!diffChunks.length) return;
+    chunkIdx = ((idx % diffChunks.length) + diffChunks.length) % diffChunks.length;
+    diffChunks[chunkIdx].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    updateNav();
+}
+
+function updateNav() {
+    const counter = document.getElementById('diff-counter');
+    const prev    = document.getElementById('prev-btn');
+    const next    = document.getElementById('next-btn');
+    const n       = diffChunks.length;
+    if (n === 0) {
+        counter.textContent = '';
+        prev.disabled = next.disabled = true;
+    } else {
+        counter.textContent = (chunkIdx + 1) + ' / ' + n;
+        prev.disabled = next.disabled = false;
+    }
+}
+
+document.getElementById('prev-btn').addEventListener('click', () => jumpTo(chunkIdx - 1));
+document.getElementById('next-btn').addEventListener('click', () => jumpTo(chunkIdx + 1));
+
+// ─── Panel collapse toggle ─────────────────────────────────────────────────────
+(function() {
+    const wrapper = document.querySelector('.output-wrapper');
+    const btn     = document.getElementById('panel-toggle-btn');
+    btn.addEventListener('click', () => {
+        const collapsed = wrapper.classList.toggle('collapsed');
+        btn.textContent = collapsed ? '▶' : '▼';
+    });
+})();
+
+// ─── Fullscreen toggle ────────────────────────────────────────────────────────
+function setFullscreen(active) {
+    const wrapper = document.querySelector('.output-wrapper');
+    const btn     = document.getElementById('fullscreen-btn');
+    wrapper.classList.toggle('fullscreen', active);
+    btn.innerHTML = active ? '&#x2923;' : '&#x2922;';
+    document.body.style.overflow = active ? 'hidden' : '';
+}
+document.getElementById('fullscreen-btn').addEventListener('click', () => {
+    setFullscreen(!document.querySelector('.output-wrapper').classList.contains('fullscreen'));
+});
+
+// ─── Collapse All / Expand All identical blocks ───────────────────────────────
+function collapseAllBlocks() {
+    document.querySelectorAll('.collapse-block').forEach(block => {
+        block.querySelector('.collapse-content').style.display = 'none';
+        block.querySelector('.collapse-icon').textContent = '▶';
+    });
+}
+function expandAllBlocks() {
+    document.querySelectorAll('.collapse-block').forEach(block => {
+        block.querySelector('.collapse-content').style.display = 'block';
+        block.querySelector('.collapse-icon').textContent = '▼';
+    });
+}
+document.getElementById('collapse-all-btn').addEventListener('click', collapseAllBlocks);
+document.getElementById('expand-all-btn').addEventListener('click', expandAllBlocks);
+
+// ─── Keyboard shortcuts ───────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+        if (document.querySelector('.output-wrapper.fullscreen')) setFullscreen(false);
+        return;
+    }
+    if (e.altKey && e.key.toLowerCase() === 'c') { e.preventDefault(); collapseAllBlocks(); }
+    if (e.altKey && e.key.toLowerCase() === 'e') { e.preventDefault(); expandAllBlocks(); }
+});
+
+// ─── Summary bar ──────────────────────────────────────────────────────────────
+function updateSummary(diff, granularity) {
+    const bar  = document.getElementById('summary-bar');
+    const adds = diff.filter(d => d.type === 'addition');
+    const dels = diff.filter(d => d.type === 'deletion');
+
+    if (!adds.length && !dels.length) {
+        bar.className   = 'summary-bar visible identical';
+        bar.innerHTML   = '<span class="badge-identical">&#10003; Exact match — texts are identical</span>';
+        return;
+    }
+
+    const unit = granularity === 'line' ? 'line' : granularity === 'word' ? 'word' : 'char';
+    const pl   = (n, u) => n + ' ' + u + (n === 1 ? '' : 's');
+    const addCh = adds.reduce((s, d) => s + d.value.length, 0);
+    const delCh = dels.reduce((s, d) => s + d.value.length, 0);
+
+    let html = '<span class="summary-del">&#8722;' + pl(dels.length, unit) + '</span>' +
+               '<span class="summary-sep">&#183;</span>' +
+               '<span class="summary-add">+' + pl(adds.length, unit) + '</span>';
+    if (granularity !== 'char') {
+        html += '<span class="summary-sep">&#183;</span>' +
+                '<span class="summary-chars">' + (addCh + delCh) + ' chars changed</span>';
+    }
+
+    bar.className = 'summary-bar visible has-diff';
+    bar.innerHTML = html;
+}
+
+// ─── Main compare ─────────────────────────────────────────────────────────────
+function runCompare() {
+    const textA = document.getElementById('text-a').value;
+    const textB = document.getElementById('text-b').value;
+
+    if (!textA && !textB) {
+        clearMirrors();
+        document.getElementById('output').innerHTML =
+            '<div class="empty-output">Enter text above to compare.</div>';
+        const bar = document.getElementById('summary-bar');
+        bar.className = 'summary-bar'; bar.innerHTML = '';
+        diffChunks = []; chunkIdx = -1; updateNav();
+        return;
+    }
+
+    hideError();
+    const mode        = document.getElementById('mode-select').value;
+    const granularity = document.getElementById('granularity-select').value;
+    const viewMode    = document.getElementById('view-select').value;
+
+    const diff = computeDiff(processText(textA, mode), processText(textB, mode), granularity);
+
+    updateMirrors(diff, granularity);
+    renderOutput(diff, viewMode, granularity);
+    updateSummary(diff, granularity);
+    collectChunks();
+}
+
+// ─── Auto-compare (debounced) ─────────────────────────────────────────────────
+function scheduleCompare() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(runCompare, 400);
+}
+
+document.getElementById('text-a').addEventListener('input', scheduleCompare);
+document.getElementById('text-b').addEventListener('input', scheduleCompare);
+document.getElementById('mode-select').addEventListener('change', runCompare);
+document.getElementById('granularity-select').addEventListener('change', runCompare);
+document.getElementById('view-select').addEventListener('change', runCompare);
+document.getElementById('compare-btn').addEventListener('click', runCompare);
+</script>
+</body>
+</html>
