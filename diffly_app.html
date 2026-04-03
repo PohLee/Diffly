@@ -336,6 +336,43 @@
             .sbs-chunk          { grid-template-columns: 1fr; }
             .chunk-left         { border-right: none; border-bottom: 1px solid #e5e7eb; }
         }
+
+        /* ── Clean-text toggle switch ── */
+        .toggle-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #374151;
+            user-select: none;
+            white-space: nowrap;
+        }
+        .toggle-label input[type="checkbox"] { display: none; }
+        .toggle-switch {
+            width: 32px;
+            height: 18px;
+            background: #d1d5db;
+            border-radius: 9px;
+            position: relative;
+            transition: background 0.2s;
+            flex-shrink: 0;
+        }
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            background: #fff;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: left 0.2s;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+        }
+        .toggle-label input:checked + .toggle-switch { background: #2563eb; }
+        .toggle-label input:checked + .toggle-switch::after { left: 16px; }
     </style>
 </head>
 <body>
@@ -365,6 +402,11 @@
                 <option value="unified">Unified</option>
             </select>
         </div>
+        <label class="toggle-label">
+            <input type="checkbox" id="clean-toggle">
+            <span class="toggle-switch"></span>
+            Clean text
+        </label>
         <button class="compare-btn" id="compare-btn">Compare</button>
     </div>
 
@@ -538,6 +580,13 @@ initScrollSync('text-b', 'mirror-b');
 // ─── Text processing ──────────────────────────────────────────────────────────
 function processText(text, mode) {
     return mode === 'ascii' ? text.replace(/[^\x00-\x7F]/g, '') : text;
+}
+function cleanText(text) {
+    return text
+        .replace(/[\r\n\t]+/g, ' ')   // line breaks + tabs → space
+        .replace(/[^\w\s]/g, '')       // strip punctuation
+        .replace(/\s{2,}/g, ' ')       // collapse multiple spaces
+        .trim();
 }
 
 // ─── Diff engine (LCS) — fully local, zero network calls ─────────────────────
@@ -850,10 +899,22 @@ function runCompare() {
     const mode        = document.getElementById('mode-select').value;
     const granularity = document.getElementById('granularity-select').value;
     const viewMode    = document.getElementById('view-select').value;
+    const doClean     = document.getElementById('clean-toggle').checked;
 
-    const diff = computeDiff(processText(textA, mode), processText(textB, mode), granularity);
+    let procA = processText(textA, mode);
+    let procB = processText(textB, mode);
+    if (doClean) {
+        procA = cleanText(procA);
+        procB = cleanText(procB);
+    }
 
-    updateMirrors(diff, granularity);
+    const diff = computeDiff(procA, procB, granularity);
+
+    if (doClean) {
+        clearMirrors();
+    } else {
+        updateMirrors(diff, granularity);
+    }
     renderOutput(diff, viewMode, granularity);
     updateSummary(diff, granularity);
     collectChunks();
@@ -870,6 +931,7 @@ document.getElementById('text-b').addEventListener('input', scheduleCompare);
 document.getElementById('mode-select').addEventListener('change', runCompare);
 document.getElementById('granularity-select').addEventListener('change', runCompare);
 document.getElementById('view-select').addEventListener('change', runCompare);
+document.getElementById('clean-toggle').addEventListener('change', runCompare);
 document.getElementById('compare-btn').addEventListener('click', runCompare);
 </script>
 </body>
