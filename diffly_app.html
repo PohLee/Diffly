@@ -5,20 +5,192 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Text Compare</title>
     <style>
+        :root {
+            --bg: #fff;
+            --bg-secondary: #f9fafb;
+            --bg-input: #fff;
+            --text: #333;
+            --text-primary: #111;
+            --text-secondary: #374151;
+            --text-muted: #6b7280;
+            --text-faint: #9ca3af;
+            --text-placeholder: #d1d5db;
+            --border: #e5e7eb;
+            --border-input: #d1d5db;
+            --border-focus: #2563eb;
+            --accent: #2563eb;
+            --accent-hover: #1d4ed8;
+            --accent-active: #1e40af;
+            --accent-bg: #eff6ff;
+            --accent-bg-drag: rgba(239, 246, 255, 0.7);
+            --btn-bg: #fff;
+            --btn-hover: #f3f4f6;
+            --addition-bg: #dcfce7;
+            --addition-text: #14532d;
+            --addition-mirror: rgba(134, 239, 172, 0.55);
+            --deletion-bg: #fee2e2;
+            --deletion-text: #7f1d1d;
+            --deletion-mirror: rgba(252, 165, 165, 0.55);
+            --chunk-border: #f59e0b;
+            --empty-side: #d1d5db;
+            --summary-identical-bg: #f0fdf4;
+            --summary-identical-border: #bbf7d0;
+            --summary-diff-bg: #fffbeb;
+            --summary-diff-border: #fde68a;
+            --summary-del: #dc2626;
+            --summary-add: #16a34a;
+            --error-bg: #fef2f2;
+            --error-border: #fecaca;
+            --error-text: #dc2626;
+            --badge-identical: #15803d;
+            --identical-text: #15803d;
+            --collapse-bg: #f9fafb;
+            --collapse-text: #9ca3af;
+            --collapse-hover: #f3f4f6;
+            --collapse-hover-text: #6b7280;
+            --sep: #e5e7eb;
+            --file-name: #6b7280;
+            --clear-btn-text: #6b7280;
+            --clear-btn-hover: #374151;
+            --output-header-text: #6b7280;
+            --nav-btn-text: #374151;
+            --nav-btn-disabled-opacity: 0.35;
+            --nav-btn-counter: #6b7280;
+            --cleanup-option-text: #374151;
+            --checkbox-accent: #2563eb;
+            --drag-over-bg: rgba(239, 246, 255, 0.7);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) {
+                --bg: #111827;
+                --bg-secondary: #1f2937;
+                --bg-input: #1f2937;
+                --text: #d1d5db;
+                --text-primary: #e5e7eb;
+                --text-secondary: #d1d5db;
+                --text-muted: #9ca3af;
+                --text-faint: #6b7280;
+                --text-placeholder: #4b5563;
+                --border: #374151;
+                --border-input: #4b5563;
+                --border-focus: #3b82f6;
+                --accent: #3b82f6;
+                --accent-hover: #2563eb;
+                --accent-active: #1d4ed8;
+                --accent-bg: #1e3a5f;
+                --accent-bg-drag: rgba(30, 58, 95, 0.5);
+                --btn-bg: #1f2937;
+                --btn-hover: #374151;
+                --addition-bg: rgba(22, 163, 74, 0.2);
+                --addition-text: #86efac;
+                --addition-mirror: rgba(22, 163, 74, 0.25);
+                --deletion-bg: rgba(220, 38, 38, 0.2);
+                --deletion-text: #fca5a5;
+                --deletion-mirror: rgba(220, 38, 38, 0.25);
+                --chunk-border: #f59e0b;
+                --empty-side: #4b5563;
+                --summary-identical-bg: rgba(22, 163, 74, 0.1);
+                --summary-identical-border: rgba(22, 163, 74, 0.3);
+                --summary-diff-bg: rgba(245, 158, 11, 0.1);
+                --summary-diff-border: rgba(245, 158, 11, 0.3);
+                --summary-del: #fca5a5;
+                --summary-add: #86efac;
+                --error-bg: rgba(220, 38, 38, 0.1);
+                --error-border: rgba(220, 38, 38, 0.3);
+                --error-text: #fca5a5;
+                --badge-identical: #86efac;
+                --identical-text: #86efac;
+                --collapse-bg: #1f2937;
+                --collapse-text: #6b7280;
+                --collapse-hover: #374151;
+                --collapse-hover-text: #9ca3af;
+                --sep: #374151;
+                --file-name: #9ca3af;
+                --clear-btn-text: #9ca3af;
+                --clear-btn-hover: #d1d5db;
+                --output-header-text: #9ca3af;
+                --nav-btn-text: #d1d5db;
+                --nav-btn-disabled-opacity: 0.35;
+                --nav-btn-counter: #9ca3af;
+                --cleanup-option-text: #d1d5db;
+                --checkbox-accent: #3b82f6;
+                --drag-over-bg: rgba(30, 58, 95, 0.5);
+            }
+        }
+
+        :root[data-theme="dark"] {
+            --bg: #111827;
+            --bg-secondary: #1f2937;
+            --bg-input: #1f2937;
+            --text: #d1d5db;
+            --text-primary: #e5e7eb;
+            --text-secondary: #d1d5db;
+            --text-muted: #9ca3af;
+            --text-faint: #6b7280;
+            --text-placeholder: #4b5563;
+            --border: #374151;
+            --border-input: #4b5563;
+            --border-focus: #3b82f6;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --accent-active: #1d4ed8;
+            --accent-bg: #1e3a5f;
+            --accent-bg-drag: rgba(30, 58, 95, 0.5);
+            --btn-bg: #1f2937;
+            --btn-hover: #374151;
+            --addition-bg: rgba(22, 163, 74, 0.2);
+            --addition-text: #86efac;
+            --addition-mirror: rgba(22, 163, 74, 0.25);
+            --deletion-bg: rgba(220, 38, 38, 0.2);
+            --deletion-text: #fca5a5;
+            --deletion-mirror: rgba(220, 38, 38, 0.25);
+            --chunk-border: #f59e0b;
+            --empty-side: #4b5563;
+            --summary-identical-bg: rgba(22, 163, 74, 0.1);
+            --summary-identical-border: rgba(22, 163, 74, 0.3);
+            --summary-diff-bg: rgba(245, 158, 11, 0.1);
+            --summary-diff-border: rgba(245, 158, 11, 0.3);
+            --summary-del: #fca5a5;
+            --summary-add: #86efac;
+            --error-bg: rgba(220, 38, 38, 0.1);
+            --error-border: rgba(220, 38, 38, 0.3);
+            --error-text: #fca5a5;
+            --badge-identical: #86efac;
+            --identical-text: #86efac;
+            --collapse-bg: #1f2937;
+            --collapse-text: #6b7280;
+            --collapse-hover: #374151;
+            --collapse-hover-text: #9ca3af;
+            --sep: #374151;
+            --file-name: #9ca3af;
+            --clear-btn-text: #9ca3af;
+            --clear-btn-hover: #d1d5db;
+            --output-header-text: #9ca3af;
+            --nav-btn-text: #d1d5db;
+            --nav-btn-disabled-opacity: 0.35;
+            --nav-btn-counter: #9ca3af;
+            --cleanup-option-text: #d1d5db;
+            --checkbox-accent: #3b82f6;
+            --drag-over-bg: rgba(30, 58, 95, 0.5);
+        }
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             line-height: 1.6;
             padding: 20px;
-            background: #fff;
-            color: #333;
+            background: var(--bg);
+            color: var(--text);
             font-size: 14px;
+            transition: background 0.2s, color 0.2s;
         }
 
         .container { max-width: 1400px; margin: 0 auto; }
 
-        h1 { margin-bottom: 14px; font-size: 1.3rem; font-weight: 600; }
+        .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+        h1 { font-size: 1.3rem; font-weight: 600; color: var(--text-primary); }
 
         /* ── Controls ── */
         .controls {
@@ -28,26 +200,28 @@
             margin-bottom: 14px;
             flex-wrap: wrap;
             padding: 10px 14px;
-            background: #f9fafb;
-            border: 1px solid #e5e7eb;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
             border-radius: 6px;
         }
+        .controls-left { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+        .controls-right { margin-left: auto; }
         .control-group { display: flex; align-items: center; gap: 6px; }
-        .control-group label { font-weight: 500; font-size: 0.85rem; color: #374151; white-space: nowrap; }
+        .control-group label { font-weight: 500; font-size: 0.85rem; color: var(--text-secondary); white-space: nowrap; }
 
         select {
             padding: 4px 8px;
-            border: 1px solid #d1d5db;
+            border: 1px solid var(--border-input);
             border-radius: 4px;
             font-size: 0.85rem;
-            background: #fff;
-            color: #333;
+            background: var(--bg-input);
+            color: var(--text);
         }
-        select:focus { outline: 2px solid #2563eb; outline-offset: 1px; }
+        select:focus { outline: 2px solid var(--border-focus); outline-offset: 1px; }
 
         .compare-btn {
             padding: 5px 16px;
-            background: #2563eb;
+            background: var(--accent);
             color: #fff;
             border: none;
             border-radius: 4px;
@@ -55,8 +229,22 @@
             font-size: 0.85rem;
             font-weight: 500;
         }
-        .compare-btn:hover { background: #1d4ed8; }
-        .compare-btn:active { background: #1e40af; }
+        .compare-btn:hover { background: var(--accent-hover); }
+        .compare-btn:active { background: var(--accent-active); }
+
+        /* ── Theme toggle ── */
+        .theme-btn {
+            padding: 4px 8px;
+            background: var(--btn-bg);
+            border: 1px solid var(--border-input);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+            transition: background 0.15s, border-color 0.15s;
+        }
+        .theme-btn:hover { background: var(--btn-hover); }
 
         /* ── Input section ── */
         .input-section {
@@ -71,18 +259,18 @@
             align-items: center;
             margin-bottom: 5px;
         }
-        .input-panel-header h2 { font-size: 0.875rem; font-weight: 600; color: #374151; }
+        .input-panel-header h2 { font-size: 0.875rem; font-weight: 600; color: var(--text-secondary); }
 
         .clear-btn {
             padding: 2px 8px;
             background: transparent;
-            color: #6b7280;
-            border: 1px solid #d1d5db;
+            color: var(--clear-btn-text);
+            border: 1px solid var(--border-input);
             border-radius: 3px;
             cursor: pointer;
             font-size: 0.75rem;
         }
-        .clear-btn:hover { background: #f3f4f6; color: #374151; }
+        .clear-btn:hover { background: var(--btn-hover); color: var(--clear-btn-hover); }
 
         /* ── Textarea + mirror overlay ── */
         /*
@@ -109,12 +297,12 @@
             pointer-events: none;
             z-index: 0;
             color: transparent;    /* hide mirror text; only backgrounds visible */
-            background: #fff;
+            background: var(--bg-input);
         }
         .mirror::-webkit-scrollbar { display: none; }
 
-        .mirror .mirror-del { background: rgba(252, 165, 165, 0.55); border-radius: 2px; }
-        .mirror .mirror-add { background: rgba(134, 239, 172, 0.55); border-radius: 2px; }
+        .mirror .mirror-del { background: var(--deletion-mirror); border-radius: 2px; }
+        .mirror .mirror-add { background: var(--addition-mirror); border-radius: 2px; }
 
         textarea {
             position: relative;
@@ -122,18 +310,18 @@
             width: 100%;
             height: 200px;
             padding: 10px;
-            border: 1px solid #d1d5db;
+            border: 1px solid var(--border-input);
             border-radius: 4px;
             font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
             font-size: 0.85rem;
             line-height: 1.6;
             resize: vertical;
             background: transparent;   /* let mirror show through */
-            color: #111;
-            caret-color: #111;
+            color: var(--text-primary);
+            caret-color: var(--text-primary);
         }
-        textarea:focus { outline: none; border-color: #2563eb; }
-        textarea.drag-over { border-color: #2563eb; background: rgba(239, 246, 255, 0.7); }
+        textarea:focus { outline: none; border-color: var(--border-focus); }
+        textarea.drag-over { border-color: var(--border-focus); background: var(--drag-over-bg); }
 
         /* ── File controls ── */
         .file-controls {
@@ -142,7 +330,7 @@
             align-items: center;
             gap: 10px;
             font-size: 0.78rem;
-            color: #6b7280;
+            color: var(--file-name);
         }
         .file-name {
             font-style: italic;
@@ -163,22 +351,22 @@
             font-size: 0.82rem;
         }
         .summary-bar.visible { display: flex; }
-        .summary-bar.identical { background: #f0fdf4; border: 1px solid #bbf7d0; }
-        .summary-bar.has-diff  { background: #fffbeb; border: 1px solid #fde68a; }
+        .summary-bar.identical { background: var(--summary-identical-bg); border: 1px solid var(--summary-identical-border); }
+        .summary-bar.has-diff  { background: var(--summary-diff-bg); border: 1px solid var(--summary-diff-border); }
 
-        .badge-identical { font-weight: 600; color: #15803d; }
-        .summary-del     { color: #dc2626; font-weight: 500; }
-        .summary-add     { color: #16a34a; font-weight: 500; }
-        .summary-chars   { color: #6b7280; }
-        .summary-sep     { color: #d1d5db; }
+        .badge-identical { font-weight: 600; color: var(--badge-identical); }
+        .summary-del     { color: var(--summary-del); font-weight: 500; }
+        .summary-add     { color: var(--summary-add); font-weight: 500; }
+        .summary-chars   { color: var(--text-muted); }
+        .summary-sep     { color: var(--sep); }
 
         /* ── Error ── */
         .error-message {
-            color: #dc2626;
+            color: var(--error-text);
             margin-bottom: 10px;
             padding: 8px 12px;
-            background: #fef2f2;
-            border: 1px solid #fecaca;
+            background: var(--error-bg);
+            border: 1px solid var(--error-border);
             border-radius: 4px;
             font-size: 0.85rem;
             display: none;
@@ -186,15 +374,15 @@
         .error-message.visible { display: block; }
 
         /* ── Output wrapper ── */
-        .output-wrapper { border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; }
+        .output-wrapper { border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
 
         .output-header {
             padding: 7px 12px;
-            background: #f9fafb;
-            border-bottom: 1px solid #e5e7eb;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
             font-size: 0.8rem;
             font-weight: 500;
-            color: #6b7280;
+            color: var(--output-header-text);
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -210,7 +398,7 @@
             inset: 0;
             z-index: 9999;
             border-radius: 0;
-            background: #fff;
+            background: var(--bg);
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -224,22 +412,22 @@
         .output-header-left { display: flex; align-items: center; gap: 6px; }
 
         .nav-controls { display: flex; align-items: center; gap: 6px; }
-        .nav-sep { width: 1px; height: 14px; background: #e5e7eb; margin: 0 2px; }
+        .nav-sep { width: 1px; height: 14px; background: var(--sep); margin: 0 2px; }
 
         .nav-btn {
             padding: 2px 10px;
-            background: #fff;
-            border: 1px solid #d1d5db;
+            background: var(--btn-bg);
+            border: 1px solid var(--border-input);
             border-radius: 3px;
             cursor: pointer;
             font-size: 0.78rem;
-            color: #374151;
+            color: var(--nav-btn-text);
             line-height: 1.6;
         }
-        .nav-btn:hover:not(:disabled) { background: #f3f4f6; }
-        .nav-btn:disabled { opacity: 0.35; cursor: default; }
+        .nav-btn:hover:not(:disabled) { background: var(--btn-hover); }
+        .nav-btn:disabled { opacity: var(--nav-btn-disabled-opacity); cursor: default; }
 
-        #diff-counter { font-size: 0.78rem; color: #6b7280; min-width: 42px; text-align: center; }
+        #diff-counter { font-size: 0.78rem; color: var(--nav-btn-counter); min-width: 42px; text-align: center; }
 
         /* ── Output content ── */
         .output-section {
@@ -250,7 +438,7 @@
         }
 
         .empty-output {
-            color: #9ca3af;
+            color: var(--text-faint);
             font-style: italic;
             text-align: center;
             padding: 20px;
@@ -259,7 +447,7 @@
 
         /* ── Unchanged / collapsible blocks ── */
         .collapse-block {
-            border: 1px solid #e5e7eb;
+            border: 1px solid var(--border);
             border-radius: 4px;
             margin-bottom: 6px;
             overflow: hidden;
@@ -268,25 +456,25 @@
             width: 100%;
             text-align: left;
             padding: 5px 12px;
-            background: #f9fafb;
+            background: var(--collapse-bg);
             border: none;
             cursor: pointer;
             font-size: 0.78rem;
-            color: #9ca3af;
+            color: var(--collapse-text);
             font-family: inherit;
             display: flex;
             align-items: center;
             gap: 6px;
             user-select: none;
         }
-        .collapse-toggle:hover { background: #f3f4f6; color: #6b7280; }
+        .collapse-toggle:hover { background: var(--collapse-hover); color: var(--collapse-hover-text); }
         .collapse-icon { font-size: 0.65rem; }
 
-        .collapse-content { border-top: 1px solid #e5e7eb; display: none; }
+        .collapse-content { border-top: 1px solid var(--border); display: none; }
 
         .unchanged-text {
             padding: 6px 12px;
-            color: #9ca3af;
+            color: var(--collapse-text);
             white-space: pre-wrap;
             overflow-wrap: break-word;
             font-family: inherit;
@@ -296,7 +484,7 @@
 
         /* ── Changed chunk ── */
         .diff-chunk {
-            border-left: 3px solid #f59e0b;
+            border-left: 3px solid var(--chunk-border);
             border-radius: 0 4px 4px 0;
             margin-bottom: 6px;
             overflow: hidden;
@@ -306,19 +494,19 @@
         .sbs-chunk { display: grid; grid-template-columns: 1fr 1fr; }
 
         .chunk-left {
-            border-right: 1px solid #e5e7eb;
+            border-right: 1px solid var(--border);
             padding: 6px 10px;
             overflow-x: auto;
-            background: #fff;
+            background: var(--bg-input);
         }
         .chunk-right {
             padding: 6px 10px;
             overflow-x: auto;
-            background: #fff;
+            background: var(--bg-input);
         }
 
         /* Unified layout */
-        .uni-chunk { padding: 4px 10px; background: #fff; }
+        .uni-chunk { padding: 4px 10px; background: var(--bg-input); }
 
         .chunk-content {
             white-space: pre-wrap;
@@ -326,21 +514,21 @@
             font-family: inherit;
         }
 
-        .addition { background: #dcfce7; color: #14532d; }
-        .deletion { background: #fee2e2; color: #7f1d1d; }
-        .empty-side { color: #d1d5db; font-style: italic; font-size: 0.78rem; }
+        .addition { background: var(--addition-bg); color: var(--addition-text); }
+        .deletion { background: var(--deletion-bg); color: var(--deletion-text); }
+        .empty-side { color: var(--empty-side); font-style: italic; font-size: 0.78rem; }
 
         /* ── Clean-text output containers ── */
         .clean-sbs {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            border: 1px solid #e5e7eb;
+            border: 1px solid var(--border);
             border-radius: 4px;
             overflow: hidden;
         }
         .clean-unified {
             padding: 6px 10px;
-            border: 1px solid #e5e7eb;
+            border: 1px solid var(--border);
             border-radius: 4px;
         }
 
@@ -355,25 +543,25 @@
         /* ── Cleanup panel ── */
         .cleanup-btn {
             padding: 4px 10px;
-            background: #fff;
-            border: 1px solid #d1d5db;
+            background: var(--btn-bg);
+            border: 1px solid var(--border-input);
             border-radius: 4px;
             cursor: pointer;
             font-size: 0.85rem;
             font-weight: 500;
-            color: #374151;
+            color: var(--text-secondary);
             white-space: nowrap;
         }
-        .cleanup-btn:hover { background: #f3f4f6; }
-        .cleanup-btn.active { border-color: #2563eb; color: #2563eb; background: #eff6ff; }
+        .cleanup-btn:hover { background: var(--btn-hover); }
+        .cleanup-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
 
         .cleanup-panel {
             display: none;
             flex-wrap: wrap;
             gap: 10px 24px;
             padding: 10px 14px;
-            background: #f9fafb;
-            border: 1px solid #e5e7eb;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
             border-radius: 6px;
             margin-bottom: 14px;
         }
@@ -384,7 +572,7 @@
             align-items: center;
             gap: 5px;
             font-size: 0.85rem;
-            color: #374151;
+            color: var(--cleanup-option-text);
             cursor: pointer;
             user-select: none;
         }
@@ -392,39 +580,47 @@
             width: 14px;
             height: 14px;
             cursor: pointer;
-            accent-color: #2563eb;
+            accent-color: var(--checkbox-accent);
         }
     </style>
 </head>
 <body>
 <div class="container">
-    <h1>Text Compare</h1>
+    <div class="header-row">
+        <h1>Text Compare</h1>
+        <button class="theme-btn" id="theme-btn" title="Toggle theme">◐ Auto</button>
+    </div>
 
     <div class="controls">
-        <div class="control-group">
-            <label for="mode-select">Mode:</label>
-            <select id="mode-select">
-                <option value="ascii">ASCII (strip non-ASCII)</option>
-                <option value="unicode">Unicode</option>
-            </select>
+        <div class="controls-left">
+            <div class="control-group">
+                <label for="mode-select">Mode:</label>
+                <select id="mode-select">
+                    <option value="ascii">ASCII (strip non-ASCII)</option>
+                    <option value="unicode">Unicode</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="granularity-select">Granularity:</label>
+                <select id="granularity-select">
+                    <option value="line">Line</option>
+                    <option value="word">Word</option>
+                    <option value="char">Character</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="view-select">View:</label>
+                <select id="view-select">
+                    <option value="sidebyside">Side-by-side</option>
+                    <option value="unified">Unified</option>
+                </select>
+            </div>
+            <button class="cleanup-btn" id="cleanup-btn">Clean Up ▼</button>
+            <button class="cleanup-btn" id="cleanup-reset-btn" title="Reset all cleanup options">Reset</button>
         </div>
-        <div class="control-group">
-            <label for="granularity-select">Granularity:</label>
-            <select id="granularity-select">
-                <option value="line">Line</option>
-                <option value="word">Word</option>
-                <option value="char">Character</option>
-            </select>
+        <div class="controls-right">
+            <button class="compare-btn" id="compare-btn">Compare</button>
         </div>
-        <div class="control-group">
-            <label for="view-select">View:</label>
-            <select id="view-select">
-                <option value="sidebyside">Side-by-side</option>
-                <option value="unified">Unified</option>
-            </select>
-        </div>
-        <button class="cleanup-btn" id="cleanup-btn">Clean Up ▼</button>
-        <button class="compare-btn" id="compare-btn">Compare</button>
     </div>
 
     <div id="cleanup-panel" class="cleanup-panel">
@@ -1074,6 +1270,42 @@ document.getElementById('cleanup-btn').addEventListener('click', () => {
         runCompare();
     });
 });
+
+document.getElementById('cleanup-reset-btn').addEventListener('click', () => {
+    ['opt-strip-punct','opt-flatten-breaks','opt-collapse-para','opt-collapse-space','opt-case','opt-trim'].forEach(id => {
+        document.getElementById(id).checked = false;
+    });
+    applyCleanupState();
+    runCompare();
+});
+
+// ─── Theme toggle ─────────────────────────────────────────────────────────────
+(function() {
+    const root = document.documentElement;
+    const btn  = document.getElementById('theme-btn');
+    const themes = ['auto', 'light', 'dark'];
+    const labels = { auto: '◐ Auto', light: '☀ Light', dark: '☾ Dark' };
+    const saved  = localStorage.getItem('diffly-theme') || 'auto';
+
+    function apply(theme) {
+        if (theme === 'auto') {
+            root.removeAttribute('data-theme');
+        } else {
+            root.setAttribute('data-theme', theme);
+        }
+        btn.textContent = labels[theme];
+        btn.title = 'Current: ' + labels[theme] + ' (click to cycle)';
+    }
+
+    apply(saved);
+
+    btn.addEventListener('click', () => {
+        const i = (themes.indexOf(localStorage.getItem('diffly-theme') || 'auto') + 1) % themes.length;
+        const next = themes[i];
+        localStorage.setItem('diffly-theme', next);
+        apply(next);
+    });
+})();
 </script>
 </body>
 </html>
