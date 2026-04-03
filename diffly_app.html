@@ -352,42 +352,48 @@
             .chunk-left         { border-right: none; border-bottom: 1px solid #e5e7eb; }
         }
 
-        /* ── Clean-text toggle switch ── */
-        .toggle-label {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
+        /* ── Cleanup panel ── */
+        .cleanup-btn {
+            padding: 4px 10px;
+            background: #fff;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
             cursor: pointer;
             font-size: 0.85rem;
             font-weight: 500;
             color: #374151;
-            user-select: none;
             white-space: nowrap;
         }
-        .toggle-label input[type="checkbox"] { display: none; }
-        .toggle-switch {
-            width: 32px;
-            height: 18px;
-            background: #d1d5db;
-            border-radius: 9px;
-            position: relative;
-            transition: background 0.2s;
-            flex-shrink: 0;
+        .cleanup-btn:hover { background: #f3f4f6; }
+        .cleanup-btn.active { border-color: #2563eb; color: #2563eb; background: #eff6ff; }
+
+        .cleanup-panel {
+            display: none;
+            flex-wrap: wrap;
+            gap: 10px 24px;
+            padding: 10px 14px;
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            margin-bottom: 14px;
         }
-        .toggle-switch::after {
-            content: '';
-            position: absolute;
+        .cleanup-panel.open { display: flex; }
+
+        .cleanup-option {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.85rem;
+            color: #374151;
+            cursor: pointer;
+            user-select: none;
+        }
+        .cleanup-option input[type="checkbox"] {
             width: 14px;
             height: 14px;
-            background: #fff;
-            border-radius: 50%;
-            top: 2px;
-            left: 2px;
-            transition: left 0.2s;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+            cursor: pointer;
+            accent-color: #2563eb;
         }
-        .toggle-label input:checked + .toggle-switch { background: #2563eb; }
-        .toggle-label input:checked + .toggle-switch::after { left: 16px; }
     </style>
 </head>
 <body>
@@ -417,12 +423,17 @@
                 <option value="unified">Unified</option>
             </select>
         </div>
-        <label class="toggle-label">
-            <input type="checkbox" id="clean-toggle">
-            <span class="toggle-switch"></span>
-            Clean text
-        </label>
+        <button class="cleanup-btn" id="cleanup-btn">Clean Up ▼</button>
         <button class="compare-btn" id="compare-btn">Compare</button>
+    </div>
+
+    <div id="cleanup-panel" class="cleanup-panel">
+        <label class="cleanup-option"><input type="checkbox" id="opt-strip-punct"> Strip punctuation</label>
+        <label class="cleanup-option"><input type="checkbox" id="opt-flatten-breaks"> Flatten line breaks</label>
+        <label class="cleanup-option"><input type="checkbox" id="opt-collapse-para"> Collapse paragraph breaks</label>
+        <label class="cleanup-option"><input type="checkbox" id="opt-collapse-space"> Collapse whitespace</label>
+        <label class="cleanup-option"><input type="checkbox" id="opt-case"> Case-insensitive</label>
+        <label class="cleanup-option"><input type="checkbox" id="opt-trim"> Trim whitespace</label>
     </div>
 
     <div id="summary-bar" class="summary-bar"></div>
@@ -596,23 +607,47 @@ initScrollSync('text-b', 'mirror-b');
 function processText(text, mode) {
     return mode === 'ascii' ? text.replace(/[^\x00-\x7F]/g, '') : text;
 }
-function cleanText(text) {
-    return text
-        .replace(/[\r\n\t]+/g, ' ')   // line breaks + tabs → space
-        .replace(/[^\w\s]/g, ' ')      // replace punctuation with space (not empty — avoids merging words)
-        .replace(/\s{2,}/g, ' ')       // collapse multiple spaces
-        .trim();
+
+// ─── Cleanup options ──────────────────────────────────────────────────────────
+function getCleanOpts() {
+    return {
+        caseInsensitive:   document.getElementById('opt-case').checked,
+        collapseParaBreaks: document.getElementById('opt-collapse-para').checked,
+        flattenBreaks:     document.getElementById('opt-flatten-breaks').checked,
+        stripPunct:        document.getElementById('opt-strip-punct').checked,
+        collapseSpace:     document.getElementById('opt-collapse-space').checked,
+        trim:              document.getElementById('opt-trim').checked,
+    };
 }
 
-// ─── Clean toggle state ───────────────────────────────────────────────────────
-function applyCleanToggleState() {
-    const doClean  = document.getElementById('clean-toggle').checked;
-    const granSel  = document.getElementById('granularity-select');
-    const lineOpt  = granSel.querySelector('option[value="line"]');
-    const colBtn   = document.getElementById('collapse-all-btn');
-    const expBtn   = document.getElementById('expand-all-btn');
+function applyCleanOpts(text, opts) {
+    if (opts.caseInsensitive)    text = text.toLowerCase();
+    if (opts.collapseParaBreaks) text = text.replace(/(\r\n|\r|\n){2,}/g, '\n');
+    if (opts.flattenBreaks)      text = text.replace(/\r\n|\r|\n/g, ' ');
+    if (opts.stripPunct)         text = text.replace(/[^\w\s]/g, ' ');
+    if (opts.collapseSpace)      text = text.replace(/\s{2,}/g, ' ');
+    if (opts.trim)               text = text.trim();
+    return text;
+}
 
-    if (doClean) {
+function updateCleanupBadge(opts) {
+    const count = Object.values(opts).filter(Boolean).length;
+    const btn   = document.getElementById('cleanup-btn');
+    const open  = document.getElementById('cleanup-panel').classList.contains('open');
+    const arrow = open ? '▲' : '▼';
+    btn.textContent = count > 0 ? 'Clean Up (' + count + ') ' + arrow : 'Clean Up ' + arrow;
+    btn.classList.toggle('active', count > 0);
+}
+
+function applyCleanupState() {
+    const opts    = getCleanOpts();
+    const flatten = opts.flattenBreaks;
+    const granSel = document.getElementById('granularity-select');
+    const lineOpt = granSel.querySelector('option[value="line"]');
+    const colBtn  = document.getElementById('collapse-all-btn');
+    const expBtn  = document.getElementById('expand-all-btn');
+
+    if (flatten) {
         lineOpt.disabled = true;
         if (granSel.value === 'line') granSel.value = 'word';
         colBtn.disabled = true;
@@ -622,6 +657,7 @@ function applyCleanToggleState() {
         colBtn.disabled  = false;
         expBtn.disabled  = false;
     }
+    updateCleanupBadge(opts);
 }
 
 // ─── Diff engine (LCS) — fully local, zero network calls ─────────────────────
@@ -987,20 +1023,25 @@ function runCompare() {
     const mode        = document.getElementById('mode-select').value;
     const granularity = document.getElementById('granularity-select').value;
     const viewMode    = document.getElementById('view-select').value;
-    const doClean     = document.getElementById('clean-toggle').checked;
+    const opts        = getCleanOpts();
+    const anyClean    = Object.values(opts).some(Boolean);
 
     let procA = processText(textA, mode);
     let procB = processText(textB, mode);
-    if (doClean) {
-        procA = cleanText(procA);
-        procB = cleanText(procB);
+    if (anyClean) {
+        procA = applyCleanOpts(procA, opts);
+        procB = applyCleanOpts(procB, opts);
     }
 
     const diff = computeDiff(procA, procB, granularity);
 
-    if (doClean) {
+    if (anyClean) {
         clearMirrors();
-        renderCleanOutput(diff, viewMode);
+        if (opts.flattenBreaks) {
+            renderCleanOutput(diff, viewMode);
+        } else {
+            renderOutput(diff, viewMode, granularity);
+        }
     } else {
         updateMirrors(diff, granularity);
         renderOutput(diff, viewMode, granularity);
@@ -1020,11 +1061,19 @@ document.getElementById('text-b').addEventListener('input', scheduleCompare);
 document.getElementById('mode-select').addEventListener('change', runCompare);
 document.getElementById('granularity-select').addEventListener('change', runCompare);
 document.getElementById('view-select').addEventListener('change', runCompare);
-document.getElementById('clean-toggle').addEventListener('change', () => {
-    applyCleanToggleState();
-    runCompare();
-});
 document.getElementById('compare-btn').addEventListener('click', runCompare);
+
+document.getElementById('cleanup-btn').addEventListener('click', () => {
+    document.getElementById('cleanup-panel').classList.toggle('open');
+    updateCleanupBadge(getCleanOpts());
+});
+
+['opt-strip-punct','opt-flatten-breaks','opt-collapse-para','opt-collapse-space','opt-case','opt-trim'].forEach(id => {
+    document.getElementById(id).addEventListener('change', () => {
+        applyCleanupState();
+        runCompare();
+    });
+});
 </script>
 </body>
 </html>
